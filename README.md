@@ -4,6 +4,11 @@
 
 作者：[@DavidHuang](https://github.com/CrazyDaveHDY)
 
+## 特点
+
+- 支持新版本的中南大学统一身份认证平台
+- 解析上一次打卡的信息作为当天的打卡信息
+
 ## 安装
 ### Python3
 该项目需要 Python3，可以从 [Python 官网](https://www.python.org/) 下载并安装
@@ -16,10 +21,10 @@
 $ git clone https://github.com/CrazyDaveHDY/CSUAutoSelect.git
 ```
 
-### requests模块
-在命令行中运行：
+### 依赖
+安装依赖软件包，在命令行中运行：
 ```console
-$ pip3 install requests
+$ pip3 install -r requirements.txt
 ```
 
 ## 运行
@@ -30,6 +35,7 @@ $ pip3 install requests
 $ python3 report.py
 ```
 
+自动打卡需要脚本一直运行，脚本会在本地时间 1:00 时进行健康打卡。
 
 ## 许可协议
 
