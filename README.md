@@ -18,7 +18,7 @@
 
 对于 git 命令行：
 ```console
-$ git clone https://github.com/CrazyDaveHDY/CSUAutoSelect.git
+$ git clone https://github.com/CrazyDaveHDY/CSUAutoReport.git
 ```
 
 ### 依赖
