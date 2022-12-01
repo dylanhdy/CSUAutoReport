@@ -5,7 +5,6 @@ import requests
 import random
 import base64
 import time
-import logging
 from bs4 import BeautifulSoup
 from Crypto.Cipher import AES
 
@@ -108,7 +107,6 @@ def sign(username, cookie):
     return "response_error", "Unknown situation", sign_res["m"]
 
 def main():
-    logging.basicConfig(filename='log.txt')
     with open('user.json', 'r') as f:
         try:
             user_list = json.load(f)
