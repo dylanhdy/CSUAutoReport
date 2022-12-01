@@ -5,6 +5,7 @@ import requests
 import random
 import base64
 import time
+import logging
 from bs4 import BeautifulSoup
 from Crypto.Cipher import AES
 
@@ -47,30 +48,29 @@ def login(username, password):
     try:
         http_result = session.post(auth_url, data=form_data)
         http_result.encoding = 'utf-8'
-        re_result = re.search("<title>(.*)</title>", http_result.text)
-        html_title = re_result.group(1)
     except requests.exceptions.ReadTimeout:
         run_err = "requests.exceptions.ReadTimeout:[%s]" % auth_url
         return "Failed", run_err, "连接SSO失败(信网中心无响应)"
     except requests.exceptions.ConnectionError:
         run_err = "requests.exceptions.ConnectionError:[%s]" % auth_url
         return "Failed", run_err, "连接SSO失败(信网中心无响应)"
+    try:
+        re_result = re.search("<title>(.*?)</title>", http_result.text)
+        html_title = re_result.group(1)
+        re_result = re.search("<script src=(.*?)>", http_result.text)
+        script_res = re_result.group(1)
     except AttributeError:
         run_err = "Request AttributeError"
         return "Failed", run_err, "连接SSO异常(无法正确解析页面)"
-    # if html_title == "个人中心":
-    #     return "Success", session.cookies.get_dict(), "成功获取用户 cookie"
-    # elif html_title == "统一身份认证平台":
-    #     run_err = "user %s imformation is incorrect" % username
-    #     return "Failed", run_err, "连接SSO失败(用户信息错误)"
-    # else:
-    #     run_err = "Unknown html title: " + html_title
-    #     return "Failed", run_err, "未知错误，请向作者反馈"
+    print(http_result.text)
     if html_title == "统一身份认证平台":
         run_err = "user %s imformation is incorrect" % username
         return "Failed", run_err, "连接SSO失败(用户信息错误)"
-    else:
+    elif script_res == "./encrypt.js":
         return "Success", session.cookies.get_dict(), "成功获取用户 cookie"
+    else:
+        run_err = "Unknown html content"
+        return "Failed", run_err, "未知错误，请向作者反馈"
 
 def sign(username, cookie):
     # 解析打卡状态
@@ -108,31 +108,43 @@ def sign(username, cookie):
     return "response_error", "Unknown situation", sign_res["m"]
 
 def main():
-    report_status = False
+    logging.basicConfig(filename='log.txt')
+    with open('user.json', 'r') as f:
+        try:
+            user_list = json.load(f)
+        except json.decoder.JSONDecodeError as err:
+            run_err = "files user.json decode error %s" % err
+            return "Failed", run_err, " json 文件格式错误"
+    user_state = {}
+    print("成功读取用户信息")
+
+    refresh_flag = False
     while True:
         time_now = time.localtime()
         time_hour = int(time.strftime('%H', time_now))
         time_min = int(time.strftime('%M', time_now))
-        if time_hour >= 1 and report_status == False:
-            with open('user.json', 'r') as f:
-                try:
-                    user = json.load(f)
-                    username = user['username']
-                    password = user['password']
-                except json.decoder.JSONDecodeError as err:
-                    run_err = "files user.json decode error %s" % err
-                    return "Failed", run_err, " json 文件格式错误"
-            print("成功读取用户信息")
-            status, cookie, message = login(username, password)
-            print(status, message)
-            if(status != "Success"):
+        if time_hour >= 1:
+            if refresh_flag == False:
+                for user in user_list:
+                    user_state[user['username']] = False
+                refresh_flag = True
+
+            # 发起登陆请求
+            for user in user_list:
+                username = user['username']
+                password = user['password']
+                print(username, password)
+                if user_state[username] == True:
+                    continue
+                status, cookie, message = login(username, password)
                 print(status, message)
-                return
-            status, data, message = sign(username, cookie)
-            print(status, message)
-            report_status = True
+                user_state[username] = True
+                if(status != "Success"):
+                    continue
+                status, data, message = sign(username, cookie)
+                print(status, message)
         if time_hour == 0 and time_min <= 10:
-            report_status = False
+            refresh_flag = False
         time.sleep(60)
 
 if __name__ == '__main__':
